@@ -16,6 +16,7 @@ export interface CalculatorState {
   startAge: number;
   retirementYear: number; // The relative year when contribution stops and withdrawal starts
   monthlyWithdrawal: number;
+  inflationRate: number; // New: Inflation rate percentage
   oneTimeEvents: OneTimeEvent[];
 }
 
@@ -25,6 +26,7 @@ export interface YearlyResult {
   totalAssets: number;
   totalInvested: number;
   interestEarnedYearly: number;
+  purchasingPower: number; // New: Real value adjusted for inflation
   isRetirement: boolean;
 }
 

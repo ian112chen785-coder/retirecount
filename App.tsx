@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { LineChart, PieChart, TrendingUp, Save, FolderOpen, Plus, Trash2, ArrowRight } from 'lucide-react';
-import { CalculatorState, OneTimeEvent, SavedScenario, YearlyResult } from './types';
+import { CalculatorState, OneTimeEvent, SavedScenario, YearlyResult, EventType } from './types';
 import { calculateCompoundInterest, calculateMonthlyDetails, formatCurrency, MonthlyDetail } from './utils/calculations';
 import { Card, Button3D, InputGroup, Modal } from './components/UI';
 import ChartSection from './components/ChartSection';
@@ -14,6 +14,7 @@ const DEFAULT_STATE: CalculatorState = {
   startAge: 25,
   retirementYear: 30, 
   monthlyWithdrawal: 0,
+  inflationRate: 2, // Default inflation
   oneTimeEvents: [],
 };
 
@@ -85,8 +86,8 @@ function App() {
       id: Date.now().toString(),
       year: Math.round(state.yearsToGrow / 2),
       amount: 100000,
-      type: 'deposit', // Forced type
-      name: `單筆投入 ${state.oneTimeEvents.length + 1}`,
+      type: 'deposit', 
+      name: `單筆計畫 ${state.oneTimeEvents.length + 1}`,
     };
     setState({ ...state, oneTimeEvents: [...state.oneTimeEvents, newEvent] });
   };
@@ -167,6 +168,17 @@ function App() {
                 unit="%"
                 onChange={(v) => setState({ ...state, annualRate: v })}
               />
+              <InputGroup
+                label="預估通貨膨脹率 (%)"
+                value={state.inflationRate}
+                disabled={lockedSections.basic}
+                min={-5}
+                max={10}
+                step={0.1}
+                unit="%"
+                helperText="用以計算未來資產的實質購買力"
+                onChange={(v) => setState({ ...state, inflationRate: v })}
+              />
               <div className="grid grid-cols-2 gap-4">
                  <InputGroup
                   label="起始年齡"
@@ -217,7 +229,7 @@ function App() {
             </Card>
 
             <Card 
-              title="單筆大額投入" 
+              title="單筆大額異動" 
               isLocked={lockedSections.events}
               onToggleLock={() => toggleLock('events')}
             >
@@ -225,9 +237,21 @@ function App() {
                  {state.oneTimeEvents.map((event) => (
                    <div key={event.id} className="p-4 rounded-2xl bg-black border border-void-800 relative group transition-all hover:border-void-700">
                      <div className="flex justify-between items-center mb-3">
-                        <span className="text-emerald-400 text-sm font-medium tracking-wide">
-                           單筆投入
-                        </span>
+                        <div className="flex items-center gap-2">
+                            <select 
+                                disabled={lockedSections.events}
+                                value={event.type}
+                                onChange={(e) => updateEvent(event.id, 'type', e.target.value as EventType)}
+                                className={`text-xs font-medium tracking-wide bg-void-900 border rounded-md px-2 py-1 focus:outline-none transition-colors ${
+                                    event.type === 'deposit' 
+                                    ? 'text-emerald-400 border-emerald-900/30' 
+                                    : 'text-red-400 border-red-900/30'
+                                }`}
+                            >
+                                <option value="deposit">單筆投入</option>
+                                <option value="withdrawal">單筆提領</option>
+                            </select>
+                        </div>
                         {!lockedSections.events && (
                           <button onClick={() => removeEvent(event.id)} className="text-void-700 hover:text-red-500 transition-colors">
                             <Trash2 size={14} />
@@ -252,18 +276,18 @@ function App() {
                          <input 
                             type="number" 
                             disabled={lockedSections.events}
-                            className="w-full bg-void-900 rounded-lg px-3 py-2 text-sm border border-void-800 focus:outline-none focus:border-white/30 text-emerald-400 font-mono disabled:opacity-50"
+                            className={`w-full bg-void-900 rounded-lg px-3 py-2 text-sm border border-void-800 focus:outline-none focus:border-white/30 font-mono disabled:opacity-50 ${event.type === 'deposit' ? 'text-emerald-400' : 'text-red-400'}`}
                             value={event.amount}
                             onChange={(e) => updateEvent(event.id, 'amount', Number(e.target.value))}
                             min={0}
-                            max={2000000}
+                            max={10000000}
                          />
                        </div>
                      </div>
                    </div>
                  ))}
                  <Button3D variant="neutral" onClick={addEvent} disabled={lockedSections.events} className="w-full text-xs border-dashed bg-transparent hover:bg-void-900 disabled:opacity-50 disabled:cursor-not-allowed">
-                    <Plus size={14} className="inline mr-1" /> 新增投入計畫
+                    <Plus size={14} className="inline mr-1" /> 新增異動計畫
                  </Button3D>
                </div>
             </Card>
@@ -272,31 +296,41 @@ function App() {
           {/* Right Column: Visualization */}
           <div className="lg:col-span-8 flex flex-col gap-6">
             
-            {/* Top Cards: Summary */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <Card className="bg-gradient-to-br from-void-900 to-black flex flex-col justify-center items-center text-center py-10 relative overflow-hidden group">
+            {/* Top Cards: Summary (Updated to 4 cols on large screens, or 2x2 grid) */}
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+              <Card className="bg-gradient-to-br from-void-900 to-black flex flex-col justify-center items-center text-center py-10 relative overflow-hidden group col-span-1 md:col-span-2 xl:col-span-1">
                 <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-accent-400 to-transparent opacity-50"></div>
-                <div className="flex flex-col items-center gap-3 z-10 w-full px-2">
+                <div className="flex flex-col items-center gap-2 z-10 w-full px-2">
                   <span className="text-void-500 text-xs uppercase tracking-widest">預估總資產</span>
-                  <span className="text-4xl md:text-5xl font-light text-white tracking-tight break-all leading-tight">
+                  <span className="text-3xl lg:text-4xl font-light text-white tracking-tight whitespace-nowrap">
                     {formatCurrency(finalResult.totalAssets)}
                   </span>
-                  <span className="text-void-600 text-[10px] bg-void-900 px-3 py-1 rounded-full border border-void-800 mt-2">
+                  <span className="text-void-600 text-[10px] bg-void-900 px-3 py-1 rounded-full border border-void-800 mt-1">
                     {state.yearsToGrow} 年後 | {state.startAge + state.yearsToGrow}歲
                   </span>
                 </div>
               </Card>
 
+              <Card className="flex flex-col justify-center items-center text-center py-8">
+                <span className="text-void-500 text-xs uppercase tracking-widest mb-2">實質購買力</span>
+                <span className="text-2xl font-light text-void-300 tracking-tight whitespace-nowrap">
+                  {formatCurrency(finalResult.purchasingPower)}
+                </span>
+                <span className="text-void-600 text-[10px] mt-1">
+                    (通膨 {state.inflationRate}%)
+                </span>
+              </Card>
+
                <Card className="flex flex-col justify-center items-center text-center py-8">
                 <span className="text-void-500 text-xs uppercase tracking-widest mb-2">總投入本金</span>
-                <span className="text-2xl md:text-3xl font-light text-emerald-400/90 tracking-tight">
+                <span className="text-2xl font-light text-emerald-400/90 tracking-tight whitespace-nowrap">
                   {formatCurrency(finalResult.totalInvested)}
                 </span>
               </Card>
 
               <Card className="flex flex-col justify-center items-center text-center py-8">
                 <span className="text-void-500 text-xs uppercase tracking-widest mb-2">複利總收益</span>
-                <span className="text-2xl md:text-3xl font-light text-accent-400/90 tracking-tight">
+                <span className="text-2xl font-light text-accent-400/90 tracking-tight whitespace-nowrap">
                   {formatCurrency(finalResult.totalAssets - finalResult.totalInvested)}
                 </span>
               </Card>
@@ -400,8 +434,8 @@ function App() {
         onClose={() => setDetailModalYear(null)}
         title={detailModalYear !== null ? `${state.startAge + detailModalYear} 歲 - 月度資產目標詳情` : ''}
       >
-        <div className="overflow-hidden rounded-xl border border-void-800">
-           <table className="w-full text-left border-collapse text-sm">
+        <div className="overflow-x-auto rounded-xl border border-void-800">
+           <table className="w-full text-left border-collapse text-sm min-w-max">
              <thead>
                <tr className="bg-void-950 text-void-500 uppercase text-xs tracking-wider">
                  <th className="p-3 border-b border-void-800">月份</th>
@@ -425,7 +459,7 @@ function App() {
                ))}
              </tbody>
            </table>
-           <div className="p-4 bg-void-950/50 text-xs text-void-500 text-center">
+           <div className="p-4 bg-void-950/50 text-xs text-void-500 text-center sticky left-0">
              * 註：此表為基於目前設定之試算模擬，實際利息計算可能因天數差異略有不同。
            </div>
         </div>

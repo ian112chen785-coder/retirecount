@@ -10,6 +10,7 @@ export const calculateCompoundInterest = (state: CalculatorState): YearlyResult[
     startAge,
     retirementYear,
     monthlyWithdrawal,
+    inflationRate,
     oneTimeEvents,
   } = state;
 
@@ -24,6 +25,7 @@ export const calculateCompoundInterest = (state: CalculatorState): YearlyResult[
     totalAssets: currentBalance,
     totalInvested: totalInvested,
     interestEarnedYearly: 0,
+    purchasingPower: currentBalance,
     isRetirement: false,
   });
 
@@ -34,12 +36,11 @@ export const calculateCompoundInterest = (state: CalculatorState): YearlyResult[
     // Check for one-time events happening at the START of this year
     const eventsThisYear = oneTimeEvents.filter((e) => e.year === year);
     eventsThisYear.forEach((e) => {
-      // Logic simplified: Events are always considered as flow impacting balance
-      // Even if we disallowed withdrawals in UI, the logic keeps it generic
       if (e.type === 'deposit') {
         currentBalance += e.amount;
         totalInvested += e.amount;
       } else {
+        // Withdrawal event
         currentBalance -= e.amount;
       }
     });
@@ -63,12 +64,18 @@ export const calculateCompoundInterest = (state: CalculatorState): YearlyResult[
       }
     }
 
+    // Calculate Purchasing Power (Discounting future value back to present value)
+    // Formula: PV = FV / (1 + r)^n
+    const inflationFactor = Math.pow(1 + (inflationRate || 0) / 100, year);
+    const realValue = Math.round(currentBalance / inflationFactor);
+
     results.push({
       year,
       age: startAge + year,
       totalAssets: Math.round(currentBalance),
       totalInvested: Math.round(totalInvested),
       interestEarnedYearly: Math.round(yearlyInterest),
+      purchasingPower: realValue,
       isRetirement: isRetirementPhase,
     });
   }
