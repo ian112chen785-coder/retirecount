@@ -22,7 +22,8 @@ const ChartSection: React.FC<ChartSectionProps> = ({ data, retirementYear }) => 
   return (
     <div className="w-full h-[400px] mt-4">
       <ResponsiveContainer width="100%" height="100%">
-        <AreaChart data={data} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+        {/* Increased top margin from 10 to 30 to accommodate the ReferenceLine label */}
+        <AreaChart data={data} margin={{ top: 30, right: 30, left: 0, bottom: 0 }}>
           <defs>
             <linearGradient id="colorTotal" x1="0" y1="0" x2="0" y2="1">
               <stop offset="5%" stopColor="#6366f1" stopOpacity={0.4} />
@@ -75,7 +76,7 @@ const ChartSection: React.FC<ChartSectionProps> = ({ data, retirementYear }) => 
               x={retirementYear} 
               stroke="#f43f5e" 
               strokeDasharray="5 5" 
-              label={{ position: 'top', value: '退休/提領開始', fill: '#f43f5e', fontSize: 12 }} 
+              label={{ position: 'top', value: '退休/提領開始', fill: '#f43f5e', fontSize: 12, dy: -10 }} 
             />
           )}
         </AreaChart>

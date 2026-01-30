@@ -276,13 +276,15 @@ function App() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <Card className="bg-gradient-to-br from-void-900 to-black flex flex-col justify-center items-center text-center py-10 relative overflow-hidden group">
                 <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-accent-400 to-transparent opacity-50"></div>
-                <span className="text-void-500 text-xs uppercase tracking-widest mb-2">預估總資產</span>
-                <span className="text-4xl md:text-5xl font-light text-white tracking-tight group-hover:scale-105 transition-transform duration-500">
-                  {formatCurrency(finalResult.totalAssets)}
-                </span>
-                <span className="text-void-600 text-[10px] mt-3 bg-void-900 px-2 py-1 rounded-full border border-void-800">
-                  {state.yearsToGrow} 年後 | {state.startAge + state.yearsToGrow}歲
-                </span>
+                <div className="flex flex-col items-center gap-3 z-10 w-full px-2">
+                  <span className="text-void-500 text-xs uppercase tracking-widest">預估總資產</span>
+                  <span className="text-4xl md:text-5xl font-light text-white tracking-tight break-all leading-tight">
+                    {formatCurrency(finalResult.totalAssets)}
+                  </span>
+                  <span className="text-void-600 text-[10px] bg-void-900 px-3 py-1 rounded-full border border-void-800 mt-2">
+                    {state.yearsToGrow} 年後 | {state.startAge + state.yearsToGrow}歲
+                  </span>
+                </div>
               </Card>
 
                <Card className="flex flex-col justify-center items-center text-center py-8">
